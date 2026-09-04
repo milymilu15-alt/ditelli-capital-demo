@@ -193,6 +193,19 @@ const ALLOWED_ORIGINS = (process.env.FRONTEND_URL || "")
   .map((url) => url.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
+/**
+ * Dominio canónico del frontend: SIEMPRE el primero de FRONTEND_URL.
+ *
+ * Ojo: FRONTEND_URL puede ser una lista ("https://a.com,https://www.a.com")
+ * porque CORS necesita aceptar varios orígenes. Interpolar esa variable
+ * cruda dentro de una URL produce basura del tipo
+ * "https://a.com,https://www.a.com/docusign-return.html", que DocuSign
+ * rechaza con INVALID_REQUEST_PARAMETER ('returnUrl' must be an absolute
+ * URL). Todo lo que construya una URL absoluta usa esta constante, nunca
+ * process.env.FRONTEND_URL.
+ */
+const FRONTEND_BASE = ALLOWED_ORIGINS[0] || "";
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -401,7 +414,7 @@ app.post("/api/session/recover", strictLimiter, async (req, res) => {
  * reenviado a otra persona— ya no sirve para nada después del primer uso.
  */
 app.get("/api/session/:token", async (req, res) => {
-  const destinoBase = ALLOWED_ORIGINS[0] || process.env.FRONTEND_URL || "";
+  const destinoBase = FRONTEND_BASE;
   try {
     const memberId = await db.consumeMagicLink(hashToken(req.params.token || ""));
     if (!memberId) {
@@ -672,7 +685,7 @@ app.post("/api/docusign/envelope", requireFlujoPublicoHabilitado, strictLimiter,
             memberId: member.id,
             memberName: member.name,
             memberEmail: member.email,
-            returnUrl: `${process.env.FRONTEND_URL}/docusign-return.html?memberId=${member.id}`,
+            returnUrl: `${FRONTEND_BASE}/docusign-return.html?memberId=${member.id}`,
           });
           console.log(`♻️  Reutilizando el sobre ${member.envelopeId} del Miembro ${member.id} en vez de crear uno nuevo.`);
           return { httpStatus: 200, body: { signingUrl, proportionalPct: member.proportionalPct } };
@@ -710,7 +723,7 @@ app.post("/api/docusign/envelope", requireFlujoPublicoHabilitado, strictLimiter,
       // Esto permite que, al terminar de firmar, el <iframe> quede en el
       // mismo origen que la página padre y el JS pueda detectarlo sin
       // problemas de CORS. Ver docusign-return.html.
-      returnUrl: `${process.env.FRONTEND_URL}/docusign-return.html?memberId=${member.id}`,
+      returnUrl: `${FRONTEND_BASE}/docusign-return.html?memberId=${member.id}`,
     });
 
     // Guardamos el % calculado (no solo envelopeId/status): así el frontend
