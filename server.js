@@ -188,10 +188,8 @@ app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 // El .replace(/\/+$/, '') saca una barra final si quedó cargada por error
 // (con ella, "https://dominio.com/" nunca matchea el Origin real que manda
 // el navegador, que nunca trae esa barra).
-const ALLOWED_ORIGINS = (process.env.FRONTEND_URL || "")
-  .split(",")
-  .map((url) => url.trim().replace(/\/+$/, ""))
-  .filter(Boolean);
+const { allowedOrigins, frontendBase } = require("./src/config");
+const ALLOWED_ORIGINS = allowedOrigins();
 
 /**
  * Dominio canónico del frontend: SIEMPRE el primero de FRONTEND_URL.
@@ -204,7 +202,7 @@ const ALLOWED_ORIGINS = (process.env.FRONTEND_URL || "")
  * URL). Todo lo que construya una URL absoluta usa esta constante, nunca
  * process.env.FRONTEND_URL.
  */
-const FRONTEND_BASE = ALLOWED_ORIGINS[0] || "";
+const FRONTEND_BASE = frontendBase();
 
 app.use(
   cors({

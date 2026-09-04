@@ -14,6 +14,7 @@
 
 const { MercadoPagoConfig, Preference, Payment, WebhookSignatureValidator, InvalidWebhookSignatureError } = require("mercadopago");
 const { usdToArs } = require("./fx");
+const { frontendBase } = require("./config");
 
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
@@ -55,9 +56,9 @@ async function createPreference({ memberId, memberName, memberEmail, amountUsd }
       // el paso de confirmación. Ver el bloque "Reapertura tras volver
       // de un pago externo" en el HTML.
       back_urls: {
-        success: `${process.env.FRONTEND_URL}/?payment=exitoso&memberId=${memberId}`,
-        pending: `${process.env.FRONTEND_URL}/?payment=pendiente&memberId=${memberId}`,
-        failure: `${process.env.FRONTEND_URL}/?payment=error&memberId=${memberId}`,
+        success: `${frontendBase()}/?payment=exitoso&memberId=${memberId}`,
+        pending: `${frontendBase()}/?payment=pendiente&memberId=${memberId}`,
+        failure: `${frontendBase()}/?payment=error&memberId=${memberId}`,
       },
       auto_return: "approved",
       notification_url: `${process.env.APP_BASE_URL}/api/payments/mp/webhook`,

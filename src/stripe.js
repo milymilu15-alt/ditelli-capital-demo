@@ -6,6 +6,7 @@
 
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const { frontendBase } = require("./config");
 
 /**
  * Crea una sesión de Stripe Checkout (página de pago alojada por Stripe).
@@ -30,8 +31,8 @@ async function createCheckoutSession({ memberId, memberName, memberEmail, amount
     ],
     // Mismo criterio que en mercadopago.js: volvemos al mismo HTML con
     // query params, no a una ruta que no existe en un sitio estático.
-    success_url: `${process.env.FRONTEND_URL}/?payment=exitoso&memberId=${memberId}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.FRONTEND_URL}/?payment=error&memberId=${memberId}`,
+    success_url: `${frontendBase()}/?payment=exitoso&memberId=${memberId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${frontendBase()}/?payment=error&memberId=${memberId}`,
   });
 
   return { checkoutUrl: session.url, sessionId: session.id };
