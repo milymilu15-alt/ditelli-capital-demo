@@ -1,0 +1,35 @@
+{
+  "name": "ditelli-capital-backend",
+  "version": "1.0.0",
+  "description": "Backend de referencia: pago (Mercado Pago / Stripe) + firma electronica (DocuSign) para el flujo de Adhesion de Ditelli Capital.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node scripts/test-fx.js && node scripts/test-markpaid.js && node scripts/test-email.js && node scripts/test-aviso-pago.js && node scripts/test-admin.js",
+    "smoke": "node scripts/smoke-local.js",
+    "verify": "node scripts/verify-deploy.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1115.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "docusign-esign": "^8.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mercadopago": "^3.4.0",
+    "multer": "^2.2.0",
+    "pg": "^8.12.0",
+    "stripe": "^16.8.0"
+  },
+  "overrides": {
+    "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

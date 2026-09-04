@@ -1,0 +1,15 @@
+# Dependencias — se reinstalan con "npm install", no hace falta subirlas
+node_modules/
+
+# Secretos — contraseña de Neon, claves de Mercado Pago/Stripe/DocuSign.
+# Esto NUNCA va a GitHub. Railway usa su propio panel de variables de
+# entorno (ver paso 6 más abajo), no lee este archivo.
+.env
+
+# Clave privada RSA de DocuSign (par de claves de "Apps and Keys")
+keys/
+*.pem
+*.key
+
+# Archivos de sistema
+.DS_Store
