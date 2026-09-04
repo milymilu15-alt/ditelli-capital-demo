@@ -35,6 +35,18 @@ const pool = new Pool({
   const confirmar = process.argv.includes("--confirmar");
   const passwords = process.argv.slice(2).filter((a) => a !== "--confirmar");
 
+  // A qué base nos estamos conectando. Este proyecto tiene una base para
+  // demo y producción y varias branches en Neon: crear los admins en la
+  // equivocada da un "usuario o contraseña incorrectos" imposible de
+  // diagnosticar desde el navegador. Se muestra sin la contraseña.
+  try {
+    const u = new URL(process.env.DATABASE_URL || "");
+    console.log(`\nBase de datos: ${u.hostname}${u.pathname}  (usuario ${u.username})`);
+  } catch {
+    console.error("\n DATABASE_URL vacía o mal formada en el .env — no puedo continuar.");
+    process.exit(1);
+  }
+
   // Siempre se muestra el estado actual antes de tocar nada.
   const { rows: actuales } = await pool.query(
     "SELECT id, username, created_at FROM admin_users ORDER BY id"
