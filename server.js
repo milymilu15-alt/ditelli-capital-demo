@@ -109,6 +109,28 @@ function validarCredencialesDeDemo() {
 }
 validarCredencialesDeDemo();
 
+/**
+ * Respuesta de error uniforme.
+ *
+ * En modo demo / desarrollo agrega `detalle` con el código y el mensaje
+ * reales de la excepción (Postgres, DocuSign, Mercado Pago, Stripe). Sin
+ * esto, cada falla del circuito llega al navegador como una frase genérica
+ * ("No se pudo generar el sobre de firma.") y hay que ir a los logs para
+ * cada paso, de a uno.
+ *
+ * En producción (MODO_DEMO=false y NODE_ENV != development) la respuesta
+ * es exactamente la de antes: solo el mensaje genérico. Los detalles
+ * internos no se filtran al cliente.
+ */
+function responderError(res, status, mensaje, err) {
+  const verboso = MODO_DEMO || process.env.NODE_ENV === "development";
+  const detalle = err ? `${err.code || ""} ${err.message || err}`.trim() : "";
+  res.status(status).json({
+    error: mensaje,
+    ...(verboso && detalle ? { detalle } : {}),
+  });
+}
+
 const app = express();
 
 // Railway (como cualquier PaaS) termina TLS en su proxy y reenvía al proceso
@@ -576,17 +598,7 @@ app.post("/api/members", strictLimiter, async (req, res) => {
     res.json({ memberId: member.id, token });
   } catch (err) {
     console.error(err);
-    // En demo/desarrollo se devuelve además el detalle real (código y
-    // mensaje de Postgres). Sin esto, un fallo de esquema o de conexión
-    // llega al navegador como un genérico "No se pudo crear el Miembro." y
-    // la causa hay que ir a buscarla a la consola del servidor. En
-    // producción (MODO_DEMO=false y NODE_ENV!=development) el mensaje sigue
-    // siendo genérico a propósito: no se filtran detalles internos.
-    const verboso = MODO_DEMO || process.env.NODE_ENV === "development";
-    res.status(500).json({
-      error: "No se pudo crear el Miembro.",
-      ...(verboso ? { detalle: `${err.code || ""} ${err.message || err}`.trim() } : {}),
-    });
+    responderError(res, 500, "No se pudo crear el Miembro.", err);
   }
 });
 
@@ -690,7 +702,7 @@ app.post("/api/docusign/envelope", requireFlujoPublicoHabilitado, strictLimiter,
     res.status(resultado.httpStatus).json(resultado.body);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "No se pudo generar el sobre de firma." });
+    responderError(res, 500, "No se pudo generar el sobre de firma.", err);
   }
 });
 
@@ -784,7 +796,7 @@ app.post("/api/payments/mp/preference", requireFlujoPublicoHabilitado, auth.requ
         error: "No pudimos obtener la cotización del dólar en este momento. Reintentá en unos minutos — no se generó ningún cargo.",
       });
     }
-    res.status(500).json({ error: "No se pudo iniciar el pago." });
+    responderError(res, 500, "No se pudo iniciar el pago.", err);
   }
 });
 
@@ -838,7 +850,7 @@ app.post("/api/payments/stripe/checkout", requireFlujoPublicoHabilitado, auth.re
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "No se pudo iniciar el pago." });
+    responderError(res, 500, "No se pudo iniciar el pago.", err);
   }
 });
 
@@ -879,7 +891,7 @@ app.get("/api/payments/transfer/quote", requireFlujoPublicoHabilitado, auth.requ
         error: "No pudimos obtener la cotización del dólar en este momento. Reintentá en unos minutos.",
       });
     }
-    res.status(500).json({ error: "No se pudo calcular el monto a transferir." });
+    responderError(res, 500, "No se pudo calcular el monto a transferir.", err);
   }
 });
 
@@ -947,7 +959,7 @@ app.post("/api/payments/transfer/notify", requireFlujoPublicoHabilitado, withCom
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "No se pudo registrar el aviso de transferencia." });
+    responderError(res, 500, "No se pudo registrar el aviso de transferencia.", err);
   }
 });
 
@@ -1130,7 +1142,7 @@ app.get("/api/members/:id/status", auth.requireMemberSession((req) => req.params
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "No se pudo consultar el estado del Miembro." });
+    responderError(res, 500, "No se pudo consultar el estado del Miembro.", err);
   }
 });
 
