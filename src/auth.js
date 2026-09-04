@@ -19,6 +19,13 @@ const jwt = require("jsonwebtoken");
 
 const SECRET = process.env.SESSION_JWT_SECRET;
 
+// En demo/desarrollo los rechazos de sesión explican la causa concreta.
+// Un 401 y un 403 acá significan cosas muy distintas —falta el token vs.
+// el token es de OTRO Miembro— y con el mensaje genérico las dos se ven
+// igual desde el navegador. En producción se mantiene el mensaje pelado.
+const VERBOSO =
+  process.env.MODO_DEMO === "true" || process.env.NODE_ENV === "development";
+
 // 30 días: el flujo real incluye pasos que pueden tardar (la transferencia
 // bancaria la confirma el equipo de Ditelli a mano, no al instante), y el
 // Miembro puede volver a consultar /status varios días después. Un JWT
@@ -45,7 +52,11 @@ function requireMemberSession(getRequestedMemberId) {
     const header = req.headers.authorization || "";
     const [scheme, token] = header.split(" ");
     if (scheme !== "Bearer" || !token) {
-      return res.status(401).json({ error: "Falta el token de sesión." });
+      console.error("401 requireMemberSession: la request no trae header Authorization: Bearer.");
+      return res.status(401).json({
+        error: "Falta el token de sesión.",
+        ...(VERBOSO ? { detalle: "la request llegó sin header Authorization: Bearer" } : {}),
+      });
     }
 
     let payload;
@@ -57,7 +68,19 @@ function requireMemberSession(getRequestedMemberId) {
 
     const requestedId = getRequestedMemberId(req);
     if (!requestedId || payload.sub !== requestedId) {
-      return res.status(403).json({ error: "No autorizado para este Miembro." });
+      // Caso típico en demo: el navegador arrastra el token de una prueba
+      // anterior (localStorage) y lo manda junto al memberId de la prueba
+      // nueva. El token es válido, pero es de otro Miembro.
+      console.error(
+        `403 requireMemberSession: el token pertenece al Miembro ${payload.sub} ` +
+        `pero la request pide el Miembro ${requestedId}.`
+      );
+      return res.status(403).json({
+        error: "No autorizado para este Miembro.",
+        ...(VERBOSO
+          ? { detalle: `el token es del Miembro ${payload.sub} y se pidió el ${requestedId} — sesión vieja en el navegador` }
+          : {}),
+      });
     }
 
     req.memberId = payload.sub;
