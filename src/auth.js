@@ -67,7 +67,25 @@ function requireMemberSession(getRequestedMemberId) {
     }
 
     const requestedId = getRequestedMemberId(req);
-    if (!requestedId || payload.sub !== requestedId) {
+
+    // Caso distinto al de abajo: la request llegó SIN memberId. El token
+    // puede ser perfectamente válido. Decir "sesión vieja" acá manda a
+    // buscar el problema al lugar equivocado — es el frontend que no
+    // mandó el dato.
+    if (!requestedId) {
+      console.error(
+        `403 requireMemberSession: la request no incluyó memberId (llegó ${JSON.stringify(requestedId)}). ` +
+        `El token es del Miembro ${payload.sub} y es válido.`
+      );
+      return res.status(403).json({
+        error: "No autorizado para este Miembro.",
+        ...(VERBOSO
+          ? { detalle: `la request no incluyó memberId (llegó ${JSON.stringify(requestedId)}) — el token es válido, del Miembro ${payload.sub}` }
+          : {}),
+      });
+    }
+
+    if (payload.sub !== requestedId) {
       // Caso típico en demo: el navegador arrastra el token de una prueba
       // anterior (localStorage) y lo manda junto al memberId de la prueba
       // nueva. El token es válido, pero es de otro Miembro.
