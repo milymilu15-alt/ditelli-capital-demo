@@ -576,7 +576,17 @@ app.post("/api/members", strictLimiter, async (req, res) => {
     res.json({ memberId: member.id, token });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "No se pudo crear el Miembro." });
+    // En demo/desarrollo se devuelve además el detalle real (código y
+    // mensaje de Postgres). Sin esto, un fallo de esquema o de conexión
+    // llega al navegador como un genérico "No se pudo crear el Miembro." y
+    // la causa hay que ir a buscarla a la consola del servidor. En
+    // producción (MODO_DEMO=false y NODE_ENV!=development) el mensaje sigue
+    // siendo genérico a propósito: no se filtran detalles internos.
+    const verboso = MODO_DEMO || process.env.NODE_ENV === "development";
+    res.status(500).json({
+      error: "No se pudo crear el Miembro.",
+      ...(verboso ? { detalle: `${err.code || ""} ${err.message || err}`.trim() } : {}),
+    });
   }
 });
 
