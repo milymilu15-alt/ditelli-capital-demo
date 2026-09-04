@@ -60,7 +60,12 @@ async function getAuthenticatedApiClient() {
   if (process.env.DOCUSIGN_PRIVATE_KEY_PATH && fs.existsSync(process.env.DOCUSIGN_PRIVATE_KEY_PATH)) {
     privateKey = fs.readFileSync(process.env.DOCUSIGN_PRIVATE_KEY_PATH);
   } else if (process.env.DOCUSIGN_PRIVATE_KEY_CONTENT) {
-    privateKey = process.env.DOCUSIGN_PRIVATE_KEY_CONTENT;
+    // Los paneles de variables de entorno (Railway incluido) a veces guardan
+    // los saltos de línea como la secuencia literal \n de dos caracteres en
+    // vez de saltos reales. Un PEM así NO parsea y el error que devuelve
+    // DocuSign no dice nada útil sobre la causa. Se normaliza acá: si el
+    // valor ya viene con saltos reales, este replace no cambia nada.
+    privateKey = process.env.DOCUSIGN_PRIVATE_KEY_CONTENT.replace(/\\n/g, "\n").trim();
   }
 
   if (!privateKey) {

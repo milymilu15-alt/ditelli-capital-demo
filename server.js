@@ -122,9 +122,35 @@ validarCredencialesDeDemo();
  * es exactamente la de antes: solo el mensaje genérico. Los detalles
  * internos no se filtran al cliente.
  */
+function detalleDeError(err) {
+  if (!err) return "";
+  // Errores HTTP de terceros (DocuSign, Mercado Pago, Stripe) vienen por
+  // axios: el motivo REAL está en el cuerpo de la respuesta, no en
+  // err.message. Sin esto, un fallo de OAuth de DocuSign se ve como
+  // "Request failed with status code 400" y no dice si fue
+  // consent_required, invalid_grant o partner_authentication_failed —
+  // que son problemas completamente distintos con soluciones distintas.
+  const resp = err.response;
+  if (resp && resp.data) {
+    const cuerpo = typeof resp.data === "string" ? resp.data : JSON.stringify(resp.data);
+    return `HTTP ${resp.status} ${cuerpo}`.trim();
+  }
+  return `${err.code || ""} ${err.message || err}`.trim();
+}
+
 function responderError(res, status, mensaje, err) {
+  // El cuerpo del proveedor va SIEMPRE al log del servidor, sea o no modo
+  // demo: es la única forma de diagnosticar una integración en producción.
+  if (err && err.response && err.response.data) {
+    console.error(
+      "  ↳ respuesta del proveedor:",
+      typeof err.response.data === "string"
+        ? err.response.data
+        : JSON.stringify(err.response.data)
+    );
+  }
   const verboso = MODO_DEMO || process.env.NODE_ENV === "development";
-  const detalle = err ? `${err.code || ""} ${err.message || err}`.trim() : "";
+  const detalle = detalleDeError(err);
   res.status(status).json({
     error: mensaje,
     ...(verboso && detalle ? { detalle } : {}),
